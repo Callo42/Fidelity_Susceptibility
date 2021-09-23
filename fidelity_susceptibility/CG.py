@@ -2,7 +2,7 @@ import jax.numpy as jnp
 from jax import custom_vjp
 import numpy as np
 from functools import partial
-from jax import jit
+
 
 
 def CG_Algorithm(A, b, initial_x, sparse=False):
@@ -89,7 +89,7 @@ CGSubspace.defvjp(CGSubspace_fwd,CGSubspace_bwd)
 
 
 
-@partial(custom_vjp, nondiff_argnums=(0,))
+@partial(custom_vjp, nondiff_argnums=(0,1))
 def CGSubspaceSparse(Aadjoint_to_gadjoint, A, g, E_0, b, alpha):
     """
     Function primitive for low-rank CG linear
@@ -107,7 +107,6 @@ def CGSubspaceSparse(Aadjoint_to_gadjoint, A, g, E_0, b, alpha):
             'E_0': smallest eigvalue
             'b': The vector satisfying (A - E_0I)x = b
             'alpha': The unique eigenvector of A w.r.t. E_0
-        zero.(The other eigenvalues of A are all greater than zero.)
     Output: the unique solution x of the low-rank 
             linear system (A - E_0I)x = b in addition to
             the condition alpha^T x = 0.
@@ -120,11 +119,11 @@ def CGSubspaceSparse(Aadjoint_to_gadjoint, A, g, E_0, b, alpha):
 
 def CGSubspaceSparse_fwd(Aadjoint_to_gadjoint, A, g, E_0, b, alpha):
     x = CGSubspaceSparse(Aadjoint_to_gadjoint,A,g,E_0,b,alpha)
-    res = (Aadjoint_to_gadjoint,A,g, E_0, alpha,x)
+    res = (g, E_0, alpha,x)
     return x, res
 
-def CGSubspaceSparse_bwd(res, grad_x):
-    Aadjoint_to_gadjoint,A,g, E_0, alpha,x = res
+def CGSubspaceSparse_bwd(Aadjoint_to_gadjoint,A,res, grad_x):
+    g, E_0, alpha,x = res
     b = grad_x - jnp.matmul(alpha, grad_x) * alpha
     grad_b = CGSubspaceSparse(Aadjoint_to_gadjoint, A, g, E_0, b, alpha)
     v_1, v_2 = - grad_b, x
@@ -133,5 +132,5 @@ def CGSubspaceSparse_bwd(res, grad_x):
     grad_g = Aadjoint_to_gadjoint(v_1, v_2)
     return (grad_g,grad_E_0,grad_b,grad_alpha)
 
-CGSubspaceSparse.defvjp(CGSubspace_fwd,CGSubspace_bwd)
+CGSubspaceSparse.defvjp(CGSubspaceSparse_fwd,CGSubspaceSparse_bwd)
 
