@@ -87,3 +87,51 @@ def CGSubspace_bwd(res, grad_x):
 
 CGSubspace.defvjp(CGSubspace_fwd,CGSubspace_bwd)
 
+
+
+@partial(custom_vjp, nondiff_argnums=(0,))
+def CGSubspaceSparse(Aadjoint_to_gadjoint, A, g, E_0, b, alpha):
+    """
+    Function primitive for low-rank CG linear
+    system solver, here A is 'sparse',
+    hence in a function representation,
+    which is a linear transformation that
+    takes a vector as input and returns another
+    vector (A*v) as output.
+    Input:  'Aadjoint_to_gadjoint': The function that
+        recieves the adjoint of A and returns the
+        adjoint of the depending parameter g. Note
+        here 'Aadjoint_to_gadjoint' is a python callable.
+            'A': a linear transformation form of matrix A
+            'g': The depending parameter that determines matrix A.
+            'E_0': smallest eigvalue
+            'b': The vector satisfying (A - E_0I)x = b
+            'alpha': The unique eigenvector of A w.r.t. E_0
+        zero.(The other eigenvalues of A are all greater than zero.)
+    Output: the unique solution x of the low-rank 
+            linear system (A - E_0I)x = b in addition to
+            the condition alpha^T x = 0.
+    """
+    Aprime = lambda v: A(v) - E_0 * v
+    initial_x = jnp.array(np.random.randn(b.shape[0]).astype(b.dtype))
+    initial_x = initial_x - jnp.matmul(alpha,initial_x) * alpha
+    x = CG_Algorithm(Aprime,b,initial_x,sparse=True)
+    return x
+
+def CGSubspaceSparse_fwd(Aadjoint_to_gadjoint, A, g, E_0, b, alpha):
+    x = CGSubspaceSparse(Aadjoint_to_gadjoint,A,g,E_0,b,alpha)
+    res = (Aadjoint_to_gadjoint,A,g, E_0, alpha,x)
+    return x, res
+
+def CGSubspaceSparse_bwd(res, grad_x):
+    Aadjoint_to_gadjoint,A,g, E_0, alpha,x = res
+    b = grad_x - jnp.matmul(alpha, grad_x) * alpha
+    grad_b = CGSubspaceSparse(Aadjoint_to_gadjoint, A, g, E_0, b, alpha)
+    v_1, v_2 = - grad_b, x
+    grad_alpha = -x * jnp.matmul(alpha, grad_x)
+    grad_E_0 = -jnp.matmul(v_1, v_2)
+    grad_g = Aadjoint_to_gadjoint(v_1, v_2)
+    return (grad_g,grad_E_0,grad_b,grad_alpha)
+
+CGSubspaceSparse.defvjp(CGSubspace_fwd,CGSubspace_bwd)
+
