@@ -3,9 +3,6 @@ config.update("jax_enable_x64", True)
 import jax.numpy as jnp
 import numpy as np
 
-from functools import partial
-from jax import jit
-
 class TFIM(object):
     """
         1D Transverse Field Ising Model(TFIM)

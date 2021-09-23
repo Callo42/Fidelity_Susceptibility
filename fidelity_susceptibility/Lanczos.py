@@ -1,4 +1,3 @@
-from jax._src.numpy.lax_numpy import diagonal
 import jax.numpy as jnp
 import numpy as np
 from jax.config import config

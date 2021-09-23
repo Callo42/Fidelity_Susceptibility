@@ -4,8 +4,6 @@ from jax.config import config
 config.update("jax_enable_x64", True)
 from Lanczos import symeigLanczos
 import numpy as np
-from functools import partial
-from jax import jit
 
 @custom_vjp
 def DominantSymeig(A,k):
