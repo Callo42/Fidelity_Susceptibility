@@ -69,17 +69,17 @@ if __name__ == "__main__":
         fid_sus_from_sparse_repre[i] = fid_sus_sparse_repre(gs[i], N, k)
         print(f"g: {gs[i]}")
         
-        datetime_now = datetime.datetime.now()
-        #save log to file
-        with open('fidelity_susceptibility/fid_sus.log', 'a') as f:
-            f.write(f"#####################################################################################\n"
-                    f"#####################################################################################\n"
-                    f"Saving at {datetime_now}:\n"
-                    f"N={N}\n"
-                    f"g: {gs[i]} \n"
-                    f"fid_sus_matrixAD: {fid_sus_from_sparse_repre[i]}\n"
-                    f"#####################################################################################\n"
-                    f"#####################################################################################\n")
+        # datetime_now = datetime.datetime.now()
+        # #save log to file
+        # with open('fidelity_susceptibility/fid_sus.log', 'a') as f:
+        #     f.write(f"#####################################################################################\n"
+        #             f"#####################################################################################\n"
+        #             f"Saving at {datetime_now}:\n"
+        #             f"N={N}\n"
+        #             f"g: {gs[i]} \n"
+        #             f"fid_sus_matrixAD: {fid_sus_from_sparse_repre[i]}\n"
+        #             f"#####################################################################################\n"
+        #             f"#####################################################################################\n")
     
     import matplotlib.pyplot as plt
     fig,ax = plt.subplots()
