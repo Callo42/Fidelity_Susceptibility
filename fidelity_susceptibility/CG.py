@@ -111,6 +111,8 @@ def CGSubspaceSparse(Aadjoint_to_gadjoint, A, g, E_0, b, alpha):
             linear system (A - E_0I)x = b in addition to
             the condition alpha^T x = 0.
     """
+    raise NotImplementedError("Sparse Implementation not finished!")
+
     Aprime = lambda v: A(v) - E_0 * v
     initial_x = jnp.array(np.random.randn(b.shape[0]).astype(b.dtype))
     initial_x = initial_x - jnp.matmul(alpha,initial_x) * alpha

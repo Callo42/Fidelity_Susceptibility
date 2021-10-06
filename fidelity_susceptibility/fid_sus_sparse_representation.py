@@ -3,16 +3,19 @@ Computing fidelity susceptibility fid_sus(g)
 of 1D TFIM. Fidelity susceptibility is an
 important index for occurence of QPT.
 
+In this file the chiF is computed using the 
+sparse representation of the hamiltonian
+rather than full matrix form
+
 """
 import jax.numpy as jnp
 from jax import jit, grad,lax
 import numpy as np
 from TFIM_init import TFIM
-from functools import partial
 import datetime
 
 
-def from_g_to_logproduct(g,g_no_diff, N, k):
+def from_g_to_logproduct_sparse(g,g_no_diff, N, k):
     """
     Computing logproduct using DominantSymeig in symeig.py,
     which is to perform AD with direct matrix form.
@@ -28,26 +31,27 @@ def from_g_to_logproduct(g,g_no_diff, N, k):
                 ln( < psi_0(g) | psi_0(g') > )
                 Here the AD is only applied to |psi(g')>
     """
-    from symeig import DominantSymeig
+    from symeig import DominantSparseSymeig
 
     model = TFIM(N,g)
-    model.setHmatrix()
-    hamiltonian = model.Hmatrix
-    energy_0, psi_0 = DominantSymeig(hamiltonian, k)
-
+    # model.setHmatrix()
+    hamiltonian = model.H
+    dim = 2**N
+    Aadjoint_to_gadjoint = model.Hadjoint_to_gadjoint
+    energy_0, psi_0 = DominantSparseSymeig(Aadjoint_to_gadjoint ,hamiltonian,g,k,dim)
     psi_matmul = jnp.matmul(lax.stop_gradient(psi_0),psi_0)
     log_product = jnp.log(psi_matmul)
     return log_product
 
 
-def fid_sus_matrix_AD(g,N,k):
+def fid_sus_sparse_repre(g,N,k):
     """
-        Computing fidelity susceptibility using DominantSymeig in symeig.py,
-    which is to perform AD with direct matrix form.
+        Computing fidelity susceptibility using DominantSparseSymeig in symeig.py,
+    which is to perform AD with sparse representation of matrix A.
     """
     g_diff = g
     g_no_diff = g
-    dlogdg = grad(from_g_to_logproduct)
+    dlogdg = grad(from_g_to_logproduct_sparse)
     d2logdg = grad(dlogdg)(g_diff,g_no_diff,N,k)
     fid_sus = - d2logdg
     return fid_sus
@@ -59,10 +63,10 @@ if __name__ == "__main__":
     k = 300
     g_count = 5
     gs = np.linspace(0.5, 1.5, num = g_count)
-    fid_sus_from_matrix_AD = np.empty(g_count)
+    fid_sus_from_sparse_repre = np.empty(g_count)
     
     for i in range(g_count):
-        fid_sus_from_matrix_AD[i] = fid_sus_matrix_AD(gs[i], N, k)
+        fid_sus_from_sparse_repre[i] = fid_sus_sparse_repre(gs[i], N, k)
         print(f"g: {gs[i]}")
         
         datetime_now = datetime.datetime.now()
@@ -73,13 +77,13 @@ if __name__ == "__main__":
                     f"Saving at {datetime_now}:\n"
                     f"N={N}\n"
                     f"g: {gs[i]} \n"
-                    f"fid_sus_matrixAD: {fid_sus_from_matrix_AD[i]}\n"
+                    f"fid_sus_matrixAD: {fid_sus_from_sparse_repre[i]}\n"
                     f"#####################################################################################\n"
                     f"#####################################################################################\n")
     
     import matplotlib.pyplot as plt
     fig,ax = plt.subplots()
-    ax.plot(gs, fid_sus_from_matrix_AD, label = "AD: normal representation")
+    ax.plot(gs, fid_sus_from_sparse_repre, label = "AD: normal representation")
     ax.set_xlabel(r"$g$")
     ax.set_ylabel(r"$\chi_F$")
     ax.set_title("Fidelity susceptibility of 1D TFIM\n" 
