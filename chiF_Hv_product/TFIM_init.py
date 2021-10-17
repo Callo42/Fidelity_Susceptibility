@@ -56,7 +56,7 @@ def H_u_initialize(N):
                     with respect to A
         """
 
-        return jnp.matmul(pHpg(v2),v1)
+        return jnp.matmul(pHpg(v2),v1)  #Here must ensure a scalar output
         
     
     return H_u, Hadjoint_to_gadjoint
