@@ -11,11 +11,10 @@ rather than full matrix form
 import jax.numpy as jnp
 from jax import jit, grad,lax
 import numpy as np
-from TFIM_init import TFIM
-import datetime
+from TFIM_init import H_u_initialize
 
 
-def from_g_to_logproduct_sparse(g,g_no_diff, N, k):
+def from_g_to_logproduct_sparse(g, N, k):
     """
     Computing logproduct using DominantSymeig in symeig.py,
     which is to perform AD with direct matrix form.
@@ -33,12 +32,9 @@ def from_g_to_logproduct_sparse(g,g_no_diff, N, k):
     """
     from symeig import DominantSparseSymeig
 
-    model = TFIM(N,g)
-    # model.setHmatrix()
-    hamiltonian = model.H
+    H_u, Hadjoint_to_gadjoint = H_u_initialize(N)
     dim = 2**N
-    Aadjoint_to_gadjoint = model.Hadjoint_to_gadjoint
-    energy_0, psi_0 = DominantSparseSymeig(Aadjoint_to_gadjoint ,hamiltonian,g,k,dim)
+    energy_0, psi_0 = DominantSparseSymeig(Hadjoint_to_gadjoint ,H_u,g,k,dim)
     psi_matmul = jnp.matmul(lax.stop_gradient(psi_0),psi_0)
     log_product = jnp.log(psi_matmul)
     return log_product
@@ -49,19 +45,18 @@ def fid_sus_sparse_repre(g,N,k):
         Computing fidelity susceptibility using DominantSparseSymeig in symeig.py,
     which is to perform AD with sparse representation of matrix A.
     """
-    g_diff = g
-    g_no_diff = g
-    dlogdg = grad(from_g_to_logproduct_sparse)
-    d2logdg = grad(dlogdg)(g_diff,g_no_diff,N,k)
+    dlogdg = grad(from_g_to_logproduct_sparse,argnums=0)
+    d2logdg = grad(dlogdg,argnums=0)(g,N,k)
     fid_sus = - d2logdg
     return fid_sus
+    
 
 
 
 if __name__ == "__main__":
     N = 10
     k = 300
-    g_count = 5
+    g_count = 200
     gs = np.linspace(0.5, 1.5, num = g_count)
     fid_sus_from_sparse_repre = np.empty(g_count)
     

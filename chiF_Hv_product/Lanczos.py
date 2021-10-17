@@ -3,7 +3,7 @@ import numpy as np
 from jax.config import config
 config.update("jax_enable_x64", True)
 
-def Lanczos(A, k, *, sparse=False, dim=None):
+def Lanczos(g,A, k, *, sparse=True, dim=None):
     """
     Lanczos method to help solve the eigenvalue
     and eigenvector of a real symmetrix matrix.
@@ -28,17 +28,17 @@ def Lanczos(A, k, *, sparse=False, dim=None):
         n = dim
         dtype = jnp.float64
         Amap = A
-    else:
-        n = A.shape[0]
-        dtype = A.dtype
-        Amap = lambda v: jnp.matmul(A, v)
+    # else:
+    #     n = A.shape[0]
+    #     dtype = A.dtype
+    #     Amap = lambda v: jnp.matmul(A, v)
     
     Q_k = jnp.zeros((n,k), dtype=dtype)
     alphas = jnp.zeros(k, dtype=dtype)
     betas = jnp.zeros(k - 1, dtype=dtype)
     q = jnp.array(np.random.randn(n).astype(dtype))
     q /= jnp.linalg.norm(q)
-    u = Amap(q)
+    u = Amap(g,q)
     alpha = jnp.matmul(q,u)
     Q_k = Q_k.at[:, 0].set(q)
     alphas = alphas.at[0].set(alpha)
@@ -53,7 +53,7 @@ def Lanczos(A, k, *, sparse=False, dim=None):
         qprime = q
         beta = jnp.linalg.norm(r)
         q = r / beta
-        u = Amap(q)
+        u = Amap(g,q)
         alpha = jnp.matmul(q,u)
         alphas = alphas.at[i].set(alpha)
         betas = betas.at[i-1].set(beta)
@@ -62,8 +62,8 @@ def Lanczos(A, k, *, sparse=False, dim=None):
     T = jnp.diag(alphas) + jnp.diag(betas, k=1) + jnp.diag(betas, k=-1)
     return Q_k, T
 
-def symeigLanczos(A, k, extreme="both", *,
-                    sparse=False, dim=None):
+def symeigLanczos(g,A, k, extreme="both", *,
+                    sparse=True, dim=None):
     """
         Computes the extreme eigenvalues and eigenvectors
     upon request of a symmetric matrix A with Lanczos
@@ -85,7 +85,7 @@ def symeigLanczos(A, k, extreme="both", *,
                 "max" -> max.                   --Output--> (eigval_max, eigvector_max)
     Output: See "Input" above.
     """
-    Q_k, T = Lanczos(A, k, sparse=sparse, dim=dim)
+    Q_k, T = Lanczos(g,A, k, sparse=sparse, dim=dim)
     eigvalsQ, eigvectorsQ = jnp.linalg.eigh(T,UPLO='U')
     eigvectorsQ = jnp.matmul(Q_k,eigvectorsQ)
     if extreme == "both":
@@ -97,38 +97,38 @@ def symeigLanczos(A, k, extreme="both", *,
 
 
 
-if __name__ == "__main__":
-    from TFIM_init import TFIM
+# if __name__ == "__main__":
+#     from TFIM_init import TFIM
 
-    N = 2
-    k = 3   
-    g = 1
-    model = TFIM(N,g)
+#     N = 2
+#     k = 3   
+#     g = 1
+#     model = TFIM(N,g)
 
 
-    model.setHmatrix()
-    H = model.Hmatrix
+#     model.setHmatrix()
+#     H = model.Hmatrix
     
-    print(f"H for N={N} is \n"
-            f"{H}\n")
-    print(f"Then testing Lanczos algorithm:\n")
+#     print(f"H for N={N} is \n"
+#             f"{H}\n")
+#     print(f"Then testing Lanczos algorithm:\n")
 
-    eigval_min, eigvector_min = symeigLanczos(H, k, extreme="min")
-    eigval_max, eigvector_max = symeigLanczos(H, k, extreme="max")
-    eigval_both_min, eigvector_both_min, eigval_both_max, eigvector_both_max = symeigLanczos(H, k, extreme="both")
+#     eigval_min, eigvector_min = symeigLanczos(H, k, extreme="min")
+#     eigval_max, eigvector_max = symeigLanczos(H, k, extreme="max")
+#     eigval_both_min, eigvector_both_min, eigval_both_max, eigvector_both_max = symeigLanczos(H, k, extreme="both")
 
-    print(f"param extreme = 'min', giving:\n"
-        f"eigval_min = {eigval_min}\n"
-        f"eigvector_min = {eigvector_min}\n")
-    print(f"param extreme = 'max', giving:\n"
-        f"eigval_max = {eigval_max}\n"
-        f"eigvector_max = {eigvector_max}\n")
-    print(f"param extreme = 'both', giving:\n"
-        f"eigval_both_min = {eigval_both_min}\n"
-        f"eigvector_both_min = {eigvector_both_min}\n"
-        f"eigval_both_max = {eigval_both_max}\n"
-        f"eigvector_both_max = {eigvector_both_max}\n")
+#     print(f"param extreme = 'min', giving:\n"
+#         f"eigval_min = {eigval_min}\n"
+#         f"eigvector_min = {eigvector_min}\n")
+#     print(f"param extreme = 'max', giving:\n"
+#         f"eigval_max = {eigval_max}\n"
+#         f"eigvector_max = {eigvector_max}\n")
+#     print(f"param extreme = 'both', giving:\n"
+#         f"eigval_both_min = {eigval_both_min}\n"
+#         f"eigvector_both_min = {eigvector_both_min}\n"
+#         f"eigval_both_max = {eigval_both_max}\n"
+#         f"eigvector_both_max = {eigvector_both_max}\n")
 
-    print("Test completed.")
+#     print("Test completed.")
 
     

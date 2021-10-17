@@ -6,7 +6,7 @@ from Lanczos import symeigLanczos
 import numpy as np
 from functools import partial
 
-@partial(custom_vjp, nondiff_argnums=(0,1))
+@partial(custom_vjp, nondiff_argnums=(0,1,))
 def DominantSparseSymeig(Aadjoint_to_gadjoint, A, g, k, dim):
     """
     Function primitive for dominant real symmetric
@@ -27,20 +27,15 @@ def DominantSparseSymeig(Aadjoint_to_gadjoint, A, g, k, dim):
             'eigvector':corresponding (non-degenerate)
                     eigenvector
     """
-    raise NotImplementedError("Sparse Implementation not finished!")
-    eigval, eigvector = symeigLanczos(A,k,extreme="min", sparse=True, dim=dim)
+    eigval, eigvector = symeigLanczos(g,A,k,extreme="min", sparse=True, dim=dim)
     return (eigval, eigvector)
 
 def DominantSparseSymeig_fwd(Aadjoint_to_gadjoint, A, g, k, dim):
-    raise NotImplementedError("Sparse Implementation not finished!")
-
-    eigval, eigvector = symeigLanczos(A,k,extreme="min", sparse=True, dim=dim)
+    eigval, eigvector = DominantSparseSymeig(Aadjoint_to_gadjoint, A, g, k, dim)
     res = (g, eigval, eigvector)
     return (eigval, eigvector), res
 
 def DominantSparseSymeig_bwd(Aadjoint_to_gadjoint,A,res, grads):
-    raise NotImplementedError("Sparse Implementation not finished!")
-
     from CG import CGSubspaceSparse
     grad_eigval, grad_eigvector = grads
     g, eigval, eigvector = res

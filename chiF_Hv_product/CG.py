@@ -5,7 +5,7 @@ from functools import partial
 
 
 
-def CG_Algorithm(A, b, initial_x, sparse=False):
+def CG_Algorithm(g,A, b, initial_x, sparse=False):
     """
     Solve for x in linear equation Ax=b
     with an initial choose of x, initial_x.
@@ -31,28 +31,28 @@ def CG_Algorithm(A, b, initial_x, sparse=False):
     n = b.shape[0]
     epsilon = 1e-7
     x = initial_x
-    r = b - Amap(x)
+    r = b - Amap(g,x)
 
     if(np.linalg.norm(r) < epsilon):
         return x
 
     d = r
-    alpha = np.matmul(r, r) / np.matmul(Amap(d),d)
+    alpha = np.matmul(r, r) / np.matmul(Amap(g,d),d)
 
     for i in range(n):
         x = x + alpha * d
-        r_next = r - alpha * Amap(d)
+        r_next = r - alpha * Amap(g,d)
         if(np.linalg.norm(r_next) < epsilon):
             break
         beta = np.matmul(r_next,r_next) / np.matmul(r,r)
         r = r_next
         d = r + beta * d
-        alpha = np.matmul(r,r) / np.matmul(Amap(d), d)
+        alpha = np.matmul(r,r) / np.matmul(Amap(g,d), d)
     
     return x
 
 
-@partial(custom_vjp, nondiff_argnums=(0,1))
+@partial(custom_vjp, nondiff_argnums=(0,1,))
 def CGSubspaceSparse(Aadjoint_to_gadjoint, A, g, E_0, b, alpha):
     """
     Function primitive for low-rank CG linear
@@ -74,12 +74,10 @@ def CGSubspaceSparse(Aadjoint_to_gadjoint, A, g, E_0, b, alpha):
             linear system (A - E_0I)x = b in addition to
             the condition alpha^T x = 0.
     """
-    raise NotImplementedError("Sparse Implementation not finished!")
-
-    Aprime = lambda v: A(v) - E_0 * v
+    Aprime = lambda g,v: A(g,v) - E_0 * v
     initial_x = jnp.array(np.random.randn(b.shape[0]).astype(b.dtype))
     initial_x = initial_x - jnp.matmul(alpha,initial_x) * alpha
-    x = CG_Algorithm(Aprime,b,initial_x,sparse=True)
+    x = CG_Algorithm(g,Aprime,b,initial_x,sparse=True)
     return x
 
 def CGSubspaceSparse_fwd(Aadjoint_to_gadjoint, A, g, E_0, b, alpha):

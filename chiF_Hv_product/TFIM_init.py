@@ -1,130 +1,75 @@
+import re
 from jax.config import config
 config.update("jax_enable_x64", True)
 import jax.numpy as jnp
 import numpy as np
 import jax
 
-class TFIM(object):
+def H_u_initialize(N):
     """
-        1D Transverse Field Ising Model(TFIM)
-        Hamiltonian:
-        H = - \sum_{i=0}^{N-1} (g \sigma_i^x + \sigma-i^z \sigma_{i+1}^z)
+    recieving the parameter g for TFIM model
+    and a vector u
+    and construct the Hamiltonian H,
+    return the product of H and u:H*u
+
+    Input: 'g': the parameter for TFIM model
+            'u': an (arbitrary) vector
+            'N': the number of sites of TFIM model
+    Output: 'result_H_u': result_H_u = H*u
+            'Hadjoint_to_gadjoint': the translation function
+                    to calculate gadjoint form
+                    Hadjoint
     """
-    # @partial(jit, static_argnums=(1,))
-    def __init__(self, N,g):
-        """
-        Initialization of the model
-        """
-        self.N = N
-        self.dim = 2**N
-        self.g = g
-        self._diags()
-        self._flips_basis()
-        # print(f"1D lattice size N={self.N} \n"
-        #     f"Model initialization completed.")
+    dim = 2**N
 
-    def _diags(self):
-        """
-        Deal with the diagonal elements of the Harmiltonian
-        """
-        indices = jnp.arange(self.dim)[:,jnp.newaxis]
-        bin_reps = (indices >> jnp.arange(self.N)[::-1]) & 1
-        spins = 1 - 2 * bin_reps
-        spins_prime = jnp.hstack( (spins[:,1:] , spins[:,0:1]) )
-        self.diag_elements = -(spins * spins_prime).sum(axis=1)
+    #initialize the diagnal of the hamiltonian matrix
+    diag_index = jnp.arange(dim)[:, jnp.newaxis]
+    diag_bin_reps = (diag_index >> jnp.arange(N)[::-1]) & 1
+    diag_spins = 1 - 2 * diag_bin_reps
+    diag_spins_prime = jnp.hstack((diag_spins[:,1:],diag_spins[:,0:1]))
+    diag_elements = -(diag_spins * diag_spins_prime).sum(axis=1)
 
-    def _flips_basis(self):
-        """
-        Deal with \sigma_i^x
-        """
-        masks = jnp.array([1 << i for i in range(self.N)], dtype="int64")
-        basis = jnp.arange(self.dim)[:,None]
-        self.flips_basis = basis ^ masks
+    #initialize the basis of flips
+    flip_masks = jnp.array([1 << i for i in range(N)], dtype="int64")
+    flip_basis = jnp.arange(dim)[:,None]
+    flips_basis = flip_basis ^ flip_masks
 
-    def setpHpg(self):
-        """
-        Return the direct matrix of
-        \partial H / \partial g
-        To be used in the full spectrum perturbation formula method
-        of calculating chi_F(fidelity susceptibility)
-        """
-        self.pHpgmatrix = jnp.zeros([self.dim,self.dim], dtype="float64")
-        self.pHpgmatrix = self.pHpgmatrix.at[self.flips_basis.T, jnp.arange(self.dim)].set(-1.0)
+    #first derivative of H, in a vector product form
+    def pHpg(v):
+        result_pHpg = -v[flips_basis].sum(axis=1)
+        return result_pHpg
 
-    def pHpg(self,v):
+    #defining the product function H
+    def H_u(g,u):
+        result_H_u = u * diag_elements - g * u[flips_basis].sum(axis=1)
+        return result_H_u
+    
+    def Hadjoint_to_gadjoint(v1,v2):
         """
-        Using equation (26):
-        pHpg = \partial H / \partial g
-            =  - \sum_{i=0}^{N-1} \sigma_i^x
-        """
-        resultv = -v[self.flips_basis].sum(axis=1)
-        return resultv
+        the adjoint translation function to be 
+        used in CG and symeig function
 
-    def setHmatrix(self):
+        Input: 'v1': one required vector to calculate A
+                'v2': another vector to calculate A
+                then A = v1 * v2^T(outer product)
+        Output: 'g_adjoint': the adjoint of the parameters(g)
+                    with respect to A
         """
-        Initialize the Hamiltonian 
-        To be stored in "self.Hmatrix"
-        """
-        diagmatrix = jnp.diag(self.diag_elements)
-        offdiagmatrix = jnp.zeros([self.dim,self.dim],dtype="float64")
-        offdiagmatrix = offdiagmatrix.at[self.flips_basis.T, jnp.arange(self.dim)].set(-self.g)
 
-        #to avoid devided by zero, add random noise into the Hamiltonian
-        randommatrix = 1e-12 * jnp.array(np.random.randn(self.dim, self.dim))
-        randommatrix = 0.5 * (randommatrix + randommatrix.T)
+        return jnp.matmul(pHpg(v2),v1)
+        
+    
+    return H_u, Hadjoint_to_gadjoint
+    
 
-        self.Hmatrix = diagmatrix + offdiagmatrix + randommatrix
 
-    def H(self, v):
-        """
-        The sparse Hamiltonian 
-        Written in a function representation
-        Aka, a "sparse" linear transformation that
-        recieves a vector v and returns another vector
-        """
-        resultv = v * self.diag_elements - self.g * v[self.flips_basis].sum(axis=1)
-        return resultv
 
-    def Hadjoint_to_gadjoint(self, v_1, v_2):
-        """
-        A function that receive the adjoint of the matrix H
-        as input, and return the adjoint of g as output.
-        """
-        return jnp.matmul(self.pHpg(v_2),v_1)[None]
+
 
 if __name__ == "__main__":
     N = 10
     g = 0.5
-    model = TFIM(N,g)
 
-    print("testing method 'setpHpg'\n")
-    model.setpHpg()
-    print("Done\n")
-
-    print("testing method 'setHmatrix'\n")
-    model.setHmatrix()
-    print("Done\n")
-
-    print("testing method 'pHpg'\n")
-    pHpg_matrix = model.pHpgmatrix
-    v = jnp.array(np.random.randn(pHpg_matrix.shape[0]))
-    resultv = model.pHpg(v)
-    print(f"Done with return {resultv}\n")
-
-    print("testing method 'H'\n")
-    pHpg_matrix = model.pHpgmatrix
-    v = jnp.array(np.random.randn(pHpg_matrix.shape[0]))
-    resultv = model.H(v)
-    print(f"Done with return {resultv}\n")
-
-    print("testing method 'Hadjoint_to_gadjoint'\n")
-    pHpg_matrix = model.pHpgmatrix
-    v_1 = jnp.array(np.random.randn(pHpg_matrix.shape[0]))
-    v_2 = jnp.array(np.random.randn(pHpg_matrix.shape[0]))
-    resultv = model.Hadjoint_to_gadjoint(v_1,v_2)
-    print(f"Done with return {resultv}\n")
-
-    print("Tests passed!")
 
 
 
