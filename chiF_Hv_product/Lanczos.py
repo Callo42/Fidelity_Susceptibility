@@ -97,38 +97,5 @@ def symeigLanczos(g,A, k, extreme="both", *,
 
 
 
-# if __name__ == "__main__":
-#     from TFIM_init import TFIM
-
-#     N = 2
-#     k = 3   
-#     g = 1
-#     model = TFIM(N,g)
-
-
-#     model.setHmatrix()
-#     H = model.Hmatrix
-    
-#     print(f"H for N={N} is \n"
-#             f"{H}\n")
-#     print(f"Then testing Lanczos algorithm:\n")
-
-#     eigval_min, eigvector_min = symeigLanczos(H, k, extreme="min")
-#     eigval_max, eigvector_max = symeigLanczos(H, k, extreme="max")
-#     eigval_both_min, eigvector_both_min, eigval_both_max, eigvector_both_max = symeigLanczos(H, k, extreme="both")
-
-#     print(f"param extreme = 'min', giving:\n"
-#         f"eigval_min = {eigval_min}\n"
-#         f"eigvector_min = {eigvector_min}\n")
-#     print(f"param extreme = 'max', giving:\n"
-#         f"eigval_max = {eigval_max}\n"
-#         f"eigvector_max = {eigvector_max}\n")
-#     print(f"param extreme = 'both', giving:\n"
-#         f"eigval_both_min = {eigval_both_min}\n"
-#         f"eigvector_both_min = {eigvector_both_min}\n"
-#         f"eigval_both_max = {eigval_both_max}\n"
-#         f"eigvector_both_max = {eigvector_both_max}\n")
-
-#     print("Test completed.")
 
     

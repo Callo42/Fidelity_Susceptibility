@@ -7,15 +7,8 @@ import jax
 
 def H_u_initialize(N):
     """
-    recieving the parameter g for TFIM model
-    and a vector u
-    and construct the Hamiltonian H,
-    return the product of H and u:H*u
-
-    Input: 'g': the parameter for TFIM model
-            'u': an (arbitrary) vector
-            'N': the number of sites of TFIM model
-    Output: 'result_H_u': result_H_u = H*u
+    Input:  'N': the number of sites of TFIM model
+    Output: 'H_u': a function that returns H*u
             'Hadjoint_to_gadjoint': the translation function
                     to calculate gadjoint form
                     Hadjoint
@@ -41,6 +34,12 @@ def H_u_initialize(N):
 
     #defining the product function H
     def H_u(g,u):
+        """
+        recieving the parameter g for TFIM model
+        and a vector u
+        then construct the Hamiltonian H,
+        return the product of H and u:H*u
+        """
         result_H_u = u * diag_elements - g * u[flips_basis].sum(axis=1)
         return result_H_u
     
@@ -65,10 +64,6 @@ def H_u_initialize(N):
 
 
 
-
-if __name__ == "__main__":
-    N = 10
-    g = 0.5
 
 
 
